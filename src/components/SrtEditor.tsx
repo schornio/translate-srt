@@ -3,10 +3,25 @@
 import { useState, useCallback } from "react";
 import { parseSrt, serializeSrt, SrtEntry } from "@/lib/srt";
 
+const LANGUAGES = [
+  "English",
+  "Spanish",
+  "French",
+  "German",
+  "Italian",
+  "Portuguese",
+  "Japanese",
+  "Chinese",
+  "Korean",
+  "Arabic",
+];
+
 export default function SrtEditor() {
   const [entries, setEntries] = useState<SrtEntry[]>([]);
   const [fileName, setFileName] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState("English");
+  const [translating, setTranslating] = useState<Record<number, boolean>>({});
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.endsWith(".srt")) {
@@ -52,6 +67,26 @@ export default function SrtEditor() {
         entry.id === id ? { ...entry, [field]: value } : entry
       )
     );
+  };
+
+  const handleTranslate = async (id: number) => {
+    const entry = entries.find((e) => e.id === id);
+    if (!entry) return;
+
+    setTranslating((prev) => ({ ...prev, [id]: true }));
+    try {
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: entry.text, targetLanguage }),
+      });
+      const data = await response.json();
+      if (data.translatedText) {
+        handleTextChange(id, data.translatedText);
+      }
+    } finally {
+      setTranslating((prev) => ({ ...prev, [id]: false }));
+    }
   };
 
   const handleDownload = () => {
@@ -137,6 +172,18 @@ export default function SrtEditor() {
             </p>
           </div>
           <div className="flex gap-3">
+            <select
+              value={targetLanguage}
+              onChange={(e) => setTargetLanguage(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label="Target language"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
             <button
               onClick={handleReset}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
@@ -180,6 +227,14 @@ export default function SrtEditor() {
                 }
                 aria-label="End time"
               />
+              <button
+                onClick={() => handleTranslate(entry.id)}
+                disabled={translating[entry.id]}
+                className="ml-auto rounded-lg bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                aria-label={`Translate entry ${entry.id}`}
+              >
+                {translating[entry.id] ? "Translating…" : "Translate"}
+              </button>
             </div>
             <textarea
               className="w-full resize-none rounded-lg border border-gray-200 p-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
