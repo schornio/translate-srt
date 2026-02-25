@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { parseSrt, serializeSrt, SrtEntry } from "@/lib/srt";
 
 const LANGUAGES = [
@@ -23,6 +23,15 @@ export default function SrtEditor() {
   const [targetLanguage, setTargetLanguage] = useState("English");
   const [translating, setTranslating] = useState<Record<number, boolean>>({});
   const [translatingAll, setTranslatingAll] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const pendingRef = useRef<((key: string) => void) | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("openai_api_key");
+    if (stored) setApiKey(stored);
+  }, []);
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.endsWith(".srt")) {
@@ -70,7 +79,7 @@ export default function SrtEditor() {
     );
   };
 
-  const handleTranslate = async (id: number) => {
+  const translateEntry = async (id: number, key: string) => {
     const entry = entries.find((e) => e.id === id);
     if (!entry) return;
 
@@ -84,6 +93,7 @@ export default function SrtEditor() {
           startTime: entry.startTime,
           endTime: entry.endTime,
           targetLanguage,
+          apiKey: key,
           fullSrt: serializeSrt(entries),
         }),
       });
@@ -96,14 +106,45 @@ export default function SrtEditor() {
     }
   };
 
+  const handleTranslate = async (id: number) => {
+    if (!apiKey) {
+      pendingRef.current = (key) => translateEntry(id, key);
+      setShowApiKeyModal(true);
+      return;
+    }
+    await translateEntry(id, apiKey);
+  };
+
   const handleTranslateAll = async () => {
-    setTranslatingAll(true);
-    try {
-      for (const entry of entries) {
-        await handleTranslate(entry.id);
+    const doAll = async (key: string) => {
+      setTranslatingAll(true);
+      try {
+        for (const entry of entries) {
+          await translateEntry(entry.id, key);
+        }
+      } finally {
+        setTranslatingAll(false);
       }
-    } finally {
-      setTranslatingAll(false);
+    };
+    if (!apiKey) {
+      pendingRef.current = doAll;
+      setShowApiKeyModal(true);
+      return;
+    }
+    await doAll(apiKey);
+  };
+
+  const handleApiKeySubmit = async () => {
+    const key = apiKeyInput.trim();
+    if (!key) return;
+    localStorage.setItem("openai_api_key", key);
+    setApiKey(key);
+    setShowApiKeyModal(false);
+    setApiKeyInput("");
+    if (pendingRef.current) {
+      const action = pendingRef.current;
+      pendingRef.current = null;
+      await action(key);
     }
   };
 
@@ -123,9 +164,47 @@ export default function SrtEditor() {
     setFileName("");
   };
 
+  const apiKeyModal = showApiKeyModal && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+        <h2 className="mb-2 text-xl font-bold text-gray-900">
+          OpenAI API Key
+        </h2>
+        <p className="mb-4 text-sm text-gray-500">
+          Enter your OpenAI API key to enable translation. It will be saved
+          locally for future use.
+        </p>
+        <input
+          type="password"
+          value={apiKeyInput}
+          onChange={(e) => setApiKeyInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleApiKeySubmit()}
+          placeholder="sk-..."
+          className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          autoFocus
+        />
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowApiKeyModal(false)}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleApiKeySubmit}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Save & Translate
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (entries.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
+      <>
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
         <div className="w-full max-w-lg">
           <h1 className="mb-2 text-center text-3xl font-bold text-gray-900">
             SRT Editor
@@ -175,10 +254,13 @@ export default function SrtEditor() {
           </label>
         </div>
       </div>
+      {apiKeyModal}
+    </>
     );
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-10 border-b bg-white shadow-sm">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
@@ -272,5 +354,7 @@ export default function SrtEditor() {
         ))}
       </main>
     </div>
+    {apiKeyModal}
+    </>
   );
 }
