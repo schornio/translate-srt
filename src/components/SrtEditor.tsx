@@ -231,27 +231,34 @@ export default function SrtEditor() {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+              <svg
+                className="mb-4 h-12 w-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                />
+              </svg>
+              <p className="mb-1 text-lg font-medium text-gray-700">
+                Drop your .srt file here
+              </p>
+              <p className="mb-4 text-sm text-gray-400">or click to browse</p>
+              <span className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                Choose File
+              </span>
+              <input
+                type="file"
+                accept=".srt"
+                className="hidden"
+                onChange={handleFileInput}
               />
-            </svg>
-            <p className="mb-1 text-lg font-medium text-gray-700">
-              Drop your .srt file here
-            </p>
-            <p className="mb-4 text-sm text-gray-400">or click to browse</p>
-            <span className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-              Choose File
-            </span>
-            <input
-              type="file"
-              accept=".srt"
-              className="hidden"
-              onChange={handleFileInput}
-            />
-          </label>
+            </label>
+          </div>
         </div>
       </div>
       {apiKeyModal}
