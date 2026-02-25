@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { parseSrt, serializeSrt, SrtEntry } from "@/lib/srt";
 
 const LANGUAGES = [
@@ -23,6 +23,15 @@ export default function SrtEditor() {
   const [targetLanguage, setTargetLanguage] = useState("English");
   const [translating, setTranslating] = useState<Record<number, boolean>>({});
   const [translatingAll, setTranslatingAll] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const pendingRef = useRef<((key: string) => void) | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("openai_api_key");
+    if (stored) setApiKey(stored);
+  }, []);
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.endsWith(".srt")) {
@@ -70,7 +79,7 @@ export default function SrtEditor() {
     );
   };
 
-  const handleTranslate = async (id: number) => {
+  const translateEntry = async (id: number, key: string) => {
     const entry = entries.find((e) => e.id === id);
     if (!entry) return;
 
@@ -79,7 +88,7 @@ export default function SrtEditor() {
       const response = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: entry.text, targetLanguage }),
+        body: JSON.stringify({ text: entry.text, targetLanguage, apiKey: key }),
       });
       const data = await response.json();
       if (data.translatedText) {
@@ -90,14 +99,45 @@ export default function SrtEditor() {
     }
   };
 
+  const handleTranslate = async (id: number) => {
+    if (!apiKey) {
+      pendingRef.current = (key) => translateEntry(id, key);
+      setShowApiKeyModal(true);
+      return;
+    }
+    await translateEntry(id, apiKey);
+  };
+
   const handleTranslateAll = async () => {
-    setTranslatingAll(true);
-    try {
-      for (const entry of entries) {
-        await handleTranslate(entry.id);
+    const doAll = async (key: string) => {
+      setTranslatingAll(true);
+      try {
+        for (const entry of entries) {
+          await translateEntry(entry.id, key);
+        }
+      } finally {
+        setTranslatingAll(false);
       }
-    } finally {
-      setTranslatingAll(false);
+    };
+    if (!apiKey) {
+      pendingRef.current = doAll;
+      setShowApiKeyModal(true);
+      return;
+    }
+    await doAll(apiKey);
+  };
+
+  const handleApiKeySubmit = async () => {
+    const key = apiKeyInput.trim();
+    if (!key) return;
+    localStorage.setItem("openai_api_key", key);
+    setApiKey(key);
+    setShowApiKeyModal(false);
+    setApiKeyInput("");
+    if (pendingRef.current) {
+      const action = pendingRef.current;
+      pendingRef.current = null;
+      await action(key);
     }
   };
 
@@ -117,62 +157,103 @@ export default function SrtEditor() {
     setFileName("");
   };
 
-  if (entries.length === 0) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-        <div className="w-full max-w-lg">
-          <h1 className="mb-2 text-center text-3xl font-bold text-gray-900">
-            SRT Editor
-          </h1>
-          <p className="mb-8 text-center text-gray-500">
-            Upload an .srt subtitle file to view and edit its contents
-          </p>
-          <label
-            className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-16 transition-colors ${
-              isDragging
-                ? "border-blue-500 bg-blue-50"
-                : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50"
-            }`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
+  const apiKeyModal = showApiKeyModal && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+        <h2 className="mb-2 text-xl font-bold text-gray-900">
+          OpenAI API Key
+        </h2>
+        <p className="mb-4 text-sm text-gray-500">
+          Enter your OpenAI API key to enable translation. It will be saved
+          locally for future use.
+        </p>
+        <input
+          type="password"
+          value={apiKeyInput}
+          onChange={(e) => setApiKeyInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleApiKeySubmit()}
+          placeholder="sk-..."
+          className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          autoFocus
+        />
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowApiKeyModal(false)}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
           >
-            <svg
-              className="mb-4 h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-              />
-            </svg>
-            <p className="mb-1 text-lg font-medium text-gray-700">
-              Drop your .srt file here
-            </p>
-            <p className="mb-4 text-sm text-gray-400">or click to browse</p>
-            <span className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-              Choose File
-            </span>
-            <input
-              type="file"
-              accept=".srt"
-              className="hidden"
-              onChange={handleFileInput}
-            />
-          </label>
+            Cancel
+          </button>
+          <button
+            onClick={handleApiKeySubmit}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Save & Translate
+          </button>
         </div>
       </div>
+    </div>
+  );
+
+  if (entries.length === 0) {
+    return (
+      <>
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
+          <div className="w-full max-w-lg">
+            <h1 className="mb-2 text-center text-3xl font-bold text-gray-900">
+              SRT Editor
+            </h1>
+            <p className="mb-8 text-center text-gray-500">
+              Upload an .srt subtitle file to view and edit its contents
+            </p>
+            <label
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-16 transition-colors ${
+                isDragging
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50"
+              }`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
+              <svg
+                className="mb-4 h-12 w-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                />
+              </svg>
+              <p className="mb-1 text-lg font-medium text-gray-700">
+                Drop your .srt file here
+              </p>
+              <p className="mb-4 text-sm text-gray-400">or click to browse</p>
+              <span className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                Choose File
+              </span>
+              <input
+                type="file"
+                accept=".srt"
+                className="hidden"
+                onChange={handleFileInput}
+              />
+            </label>
+          </div>
+        </div>
+        {apiKeyModal}
+      </>
     );
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-10 border-b bg-white shadow-sm">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
@@ -266,5 +347,7 @@ export default function SrtEditor() {
         ))}
       </main>
     </div>
+    {apiKeyModal}
+    </>
   );
 }

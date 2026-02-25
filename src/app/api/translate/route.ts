@@ -1,8 +1,8 @@
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 
 export async function POST(request: Request) {
-  const { text, targetLanguage } = await request.json();
+  const { text, targetLanguage, apiKey } = await request.json();
 
   if (!text || !targetLanguage) {
     return Response.json(
@@ -10,6 +10,12 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  if (!apiKey) {
+    return Response.json({ error: "Missing API key" }, { status: 400 });
+  }
+
+  const openai = createOpenAI({ apiKey });
 
   const { text: translatedText } = await generateText({
     model: openai("gpt-4o-mini"),
