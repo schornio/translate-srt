@@ -81,6 +81,8 @@ export default function SrtEditor() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: entry.text,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
           targetLanguage,
           fullSrt: serializeSrt(entries),
         }),
