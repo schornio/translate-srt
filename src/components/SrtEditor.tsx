@@ -79,7 +79,11 @@ export default function SrtEditor() {
       const response = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: entry.text, targetLanguage }),
+        body: JSON.stringify({
+          text: entry.text,
+          targetLanguage,
+          fullSrt: serializeSrt(entries),
+        }),
       });
       const data = await response.json();
       if (data.translatedText) {
