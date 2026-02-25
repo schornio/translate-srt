@@ -22,6 +22,7 @@ export default function SrtEditor() {
   const [isDragging, setIsDragging] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState("English");
   const [translating, setTranslating] = useState<Record<number, boolean>>({});
+  const [translatingAll, setTranslatingAll] = useState(false);
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.endsWith(".srt")) {
@@ -86,6 +87,17 @@ export default function SrtEditor() {
       }
     } finally {
       setTranslating((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleTranslateAll = async () => {
+    setTranslatingAll(true);
+    try {
+      for (const entry of entries) {
+        await handleTranslate(entry.id);
+      }
+    } finally {
+      setTranslatingAll(false);
     }
   };
 
@@ -184,6 +196,13 @@ export default function SrtEditor() {
                 </option>
               ))}
             </select>
+            <button
+              onClick={handleTranslateAll}
+              disabled={translatingAll}
+              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              {translatingAll ? "Translating…" : "Translate All"}
+            </button>
             <button
               onClick={handleReset}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
