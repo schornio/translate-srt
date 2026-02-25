@@ -88,7 +88,14 @@ export default function SrtEditor() {
       const response = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: entry.text, targetLanguage, apiKey: key }),
+        body: JSON.stringify({
+          text: entry.text,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
+          targetLanguage,
+          apiKey: key,
+          fullSrt: serializeSrt(entries),
+        }),
       });
       const data = await response.json();
       if (data.translatedText) {
@@ -198,25 +205,31 @@ export default function SrtEditor() {
     return (
       <>
         <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-          <div className="w-full max-w-lg">
-            <h1 className="mb-2 text-center text-3xl font-bold text-gray-900">
-              SRT Editor
-            </h1>
-            <p className="mb-8 text-center text-gray-500">
-              Upload an .srt subtitle file to view and edit its contents
-            </p>
-            <label
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-16 transition-colors ${
-                isDragging
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50"
-              }`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
+        <div className="w-full max-w-lg">
+          <h1 className="mb-2 text-center text-3xl font-bold text-gray-900">
+            SRT Editor
+          </h1>
+          <p className="mb-8 text-center text-gray-500">
+            Upload an .srt subtitle file to view and edit its contents
+          </p>
+          <label
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-16 transition-colors ${
+              isDragging
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50"
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+          >
+            <svg
+              className="mb-4 h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
               <svg
                 className="mb-4 h-12 w-12 text-gray-400"
@@ -247,8 +260,9 @@ export default function SrtEditor() {
             </label>
           </div>
         </div>
-        {apiKeyModal}
-      </>
+      </div>
+      {apiKeyModal}
+    </>
     );
   }
 
