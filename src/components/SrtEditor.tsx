@@ -62,20 +62,20 @@ export default function SrtEditor() {
   const handleTextChange = (id: number, newText: string) => {
     setEntries((prev) =>
       prev.map((entry) =>
-        entry.id === id ? { ...entry, text: newText } : entry
-      )
+        entry.id === id ? { ...entry, text: newText } : entry,
+      ),
     );
   };
 
   const handleTimeChange = (
     id: number,
     field: "startTime" | "endTime",
-    value: string
+    value: string,
   ) => {
     setEntries((prev) =>
       prev.map((entry) =>
-        entry.id === id ? { ...entry, [field]: value } : entry
-      )
+        entry.id === id ? { ...entry, [field]: value } : entry,
+      ),
     );
   };
 
@@ -167,9 +167,7 @@ export default function SrtEditor() {
   const apiKeyModal = showApiKeyModal && (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
-        <h2 className="mb-2 text-xl font-bold text-gray-900">
-          OpenAI API Key
-        </h2>
+        <h2 className="mb-2 text-xl font-bold text-gray-900">OpenAI API Key</h2>
         <p className="mb-4 text-sm text-gray-500">
           Enter your OpenAI API key to enable translation. It will be saved
           locally for future use.
@@ -205,31 +203,25 @@ export default function SrtEditor() {
     return (
       <>
         <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-        <div className="w-full max-w-lg">
-          <h1 className="mb-2 text-center text-3xl font-bold text-gray-900">
-            SRT Editor
-          </h1>
-          <p className="mb-8 text-center text-gray-500">
-            Upload an .srt subtitle file to view and edit its contents
-          </p>
-          <label
-            className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-16 transition-colors ${
-              isDragging
-                ? "border-blue-500 bg-blue-50"
-                : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50"
-            }`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-          >
-            <svg
-              className="mb-4 h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="w-full max-w-lg">
+            <h1 className="mb-2 text-center text-3xl font-bold text-gray-900">
+              SRT Editor
+            </h1>
+            <p className="mb-8 text-center text-gray-500">
+              Upload an .srt subtitle file to view and edit its contents
+            </p>
+            <label
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-16 transition-colors ${
+                isDragging
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50"
+              }`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
             >
               <svg
                 className="mb-4 h-12 w-12 text-gray-400"
@@ -260,108 +252,107 @@ export default function SrtEditor() {
             </label>
           </div>
         </div>
-      </div>
-      {apiKeyModal}
-    </>
+        {apiKeyModal}
+      </>
     );
   }
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-10 border-b bg-white shadow-sm">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">SRT Editor</h1>
-            <p className="text-sm text-gray-500">
-              {fileName} &mdash; {entries.length} subtitle
-              {entries.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <select
-              value={targetLanguage}
-              onChange={(e) => setTargetLanguage(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              aria-label="Target language"
-            >
-              {LANGUAGES.map((lang) => (
-                <option key={lang} value={lang}>
-                  {lang}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleTranslateAll}
-              disabled={translatingAll}
-              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
-            >
-              {translatingAll ? "Translating…" : "Translate All"}
-            </button>
-            <button
-              onClick={handleReset}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-            >
-              Upload New
-            </button>
-            <button
-              onClick={handleDownload}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              Download .srt
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-4xl space-y-4 p-6">
-        {entries.map((entry) => (
-          <div
-            key={entry.id}
-            className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
-          >
-            <div className="mb-3 flex items-center gap-3">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                {entry.id}
-              </span>
-              <input
-                className="rounded border border-gray-200 px-2 py-1 font-mono text-xs text-gray-600 focus:border-blue-400 focus:outline-none"
-                value={entry.startTime}
-                onChange={(e) =>
-                  handleTimeChange(entry.id, "startTime", e.target.value)
-                }
-                aria-label="Start time"
-              />
-              <span className="text-gray-400">→</span>
-              <input
-                className="rounded border border-gray-200 px-2 py-1 font-mono text-xs text-gray-600 focus:border-blue-400 focus:outline-none"
-                value={entry.endTime}
-                onChange={(e) =>
-                  handleTimeChange(entry.id, "endTime", e.target.value)
-                }
-                aria-label="End time"
-              />
-              <button
-                onClick={() => handleTranslate(entry.id)}
-                disabled={translating[entry.id]}
-                className="ml-auto rounded-lg bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                aria-label={`Translate entry ${entry.id}`}
+      <div className="min-h-screen bg-gray-50">
+        <header className="sticky top-0 z-10 border-b bg-white shadow-sm">
+          <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">SRT Editor</h1>
+              <p className="text-sm text-gray-500">
+                {fileName} &mdash; {entries.length} subtitle
+                {entries.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <select
+                value={targetLanguage}
+                onChange={(e) => setTargetLanguage(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                aria-label="Target language"
               >
-                {translating[entry.id] ? "Translating…" : "Translate"}
+                {LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleTranslateAll}
+                disabled={translatingAll}
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                {translatingAll ? "Translating…" : "Translate All"}
+              </button>
+              <button
+                onClick={handleReset}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Upload New
+              </button>
+              <button
+                onClick={handleDownload}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Download .srt
               </button>
             </div>
-            <textarea
-              className="w-full resize-none rounded-lg border border-gray-200 p-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              rows={Math.max(2, entry.text.split("\n").length)}
-              value={entry.text}
-              onChange={(e) => handleTextChange(entry.id, e.target.value)}
-              aria-label={`Subtitle text for entry ${entry.id}`}
-            />
           </div>
-        ))}
-      </main>
-    </div>
-    {apiKeyModal}
+        </header>
+
+        <main className="mx-auto max-w-4xl space-y-4 p-6">
+          {entries.map((entry) => (
+            <div
+              key={entry.id}
+              className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+            >
+              <div className="mb-3 flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+                  {entry.id}
+                </span>
+                <input
+                  className="rounded border border-gray-200 px-2 py-1 font-mono text-xs text-gray-600 focus:border-blue-400 focus:outline-none"
+                  value={entry.startTime}
+                  onChange={(e) =>
+                    handleTimeChange(entry.id, "startTime", e.target.value)
+                  }
+                  aria-label="Start time"
+                />
+                <span className="text-gray-400">→</span>
+                <input
+                  className="rounded border border-gray-200 px-2 py-1 font-mono text-xs text-gray-600 focus:border-blue-400 focus:outline-none"
+                  value={entry.endTime}
+                  onChange={(e) =>
+                    handleTimeChange(entry.id, "endTime", e.target.value)
+                  }
+                  aria-label="End time"
+                />
+                <button
+                  onClick={() => handleTranslate(entry.id)}
+                  disabled={translating[entry.id]}
+                  className="ml-auto rounded-lg bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                  aria-label={`Translate entry ${entry.id}`}
+                >
+                  {translating[entry.id] ? "Translating…" : "Translate"}
+                </button>
+              </div>
+              <textarea
+                className="w-full resize-none rounded-lg border border-gray-200 p-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                rows={Math.max(2, entry.text.split("\n").length)}
+                value={entry.text}
+                onChange={(e) => handleTextChange(entry.id, e.target.value)}
+                aria-label={`Subtitle text for entry ${entry.id}`}
+              />
+            </div>
+          ))}
+        </main>
+      </div>
+      {apiKeyModal}
     </>
   );
 }
