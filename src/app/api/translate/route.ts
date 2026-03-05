@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     startTime && endTime ? ` (timestamp: ${startTime} --> ${endTime})` : "";
 
   const { text: translatedText } = await generateText({
-    model: openai("gpt-4.1-mini"),
+    model: openai("gpt-5.2"),
     prompt: `${contextSection}Translate the following subtitle text${timestampSection} to ${targetLanguage}. Return only the translated text, preserving any line breaks:\n\n${text}`,
   });
 
